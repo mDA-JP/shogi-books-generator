@@ -215,7 +215,7 @@ class Kif:
             parser = KifParser
         self.start_board, self.moves = parser.parse(open(self.path, 'r'))
 
-    def index(self, index=None):
+    def create_specified_board(self, index=None):
         board = deepcopy(self.start_board)
         if index == None:
             index = len(self.moves)
@@ -226,5 +226,5 @@ class Kif:
 
 if __name__ == '__main__':
     kif = Kif('test.kif')
-    board = kif.index()
+    board = kif.create_specified_board()
     board.print()
