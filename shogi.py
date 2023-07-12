@@ -1,3 +1,5 @@
+import os
+
 from dataclasses import dataclass
 from copy import deepcopy
 
@@ -52,6 +54,16 @@ KANSUJI_INT_MAP = {
     '七': 7,
     '八': 8,
     '九': 9,
+    '十': 10,
+    '十一': 11,
+    '十二': 12,
+    '十三': 13,
+    '十四': 14,
+    '十五': 15,
+    '十六': 16,
+    '十七': 17,
+    '十八': 18,
+    '十九': 19,
 }
 
 
@@ -75,7 +87,7 @@ class Piece:
     def to_str(self):
         return ('v' if self.camp == 1 else ' ') + PIECE_KANJI_MAP[self.type_]
 
-
+EMPTY_BOARD = [Piece(EMP, -1) for i in range(81)]
 INITIAL_BOARD = [
     Piece(KY, 1), Piece(KE, 1), Piece(GI, 1), Piece(KI, 1), Piece(OU, 1), Piece(KI, 1), Piece(GI, 1), Piece(KE, 1), Piece(KY, 1),
     Piece(EMP, -1), Piece(HI, 1), Piece(EMP, -1), Piece(EMP, -1), Piece(EMP, -1), Piece(EMP, -1), Piece(EMP, -1), Piece(KA, 1), Piece(EMP, -1),
@@ -108,11 +120,10 @@ class Square:
 
 
 class Board:
-    def __init__(self, board=None):
-        if board is None:
-            self.board = board if board else INITIAL_BOARD
-            self.b_hand = [0] * 7
-            self.w_hand = [0] * 7
+    def __init__(self, board=INITIAL_BOARD, b_hand=[0] * 7, w_hand=[0] * 7):
+        self.board = board
+        self.b_hand = b_hand
+        self.w_hand = w_hand
 
     def move(self, move):
         if move.from_.is_hand():
@@ -169,17 +180,11 @@ class KifParser:
     @classmethod
     def parse(cls, f):
         flag = False
-        init_flag = False
-        zenkaku_flag = False
         board = Board() 
         moves = []
         for l in f:
             if '後手の持駒' in l:
-                init_flag = True
-                zenkaku_flag = '　' in l
-                l.split('：')
-            elif '先手の持駒':
-                pass
+                board = cls._init_board(f, l)
 
             ll = l.split()
             if ll[0] == '1':
@@ -207,6 +212,44 @@ class KifParser:
                 moves[-1].comment += l[1:]
         return board, moves
 
+    @classmethod
+    def _init_board(cls, f, s):
+        b_hand = [0] * 7
+        w_hand = [0] * 7
+        board = EMPTY_BOARD
+
+        def _hand(s):
+            space = ' ' if ' ' in s else '　'
+            hand = b_hand if '先手' in s else w_hand
+            for p in s.split('：')[1].split(space):
+                piece = KANJI_PIECE_MAP[p[0]]
+                num = KANSUJI_INT_MAP[p[1:]]
+                hand[piece] = num
+
+        _hand(s.strip())
+
+        for l in f:
+            l = l.strip()
+            if len(l) == 0:
+                continue
+            if '持駒' in l:
+                _hand(l)
+            elif l[-1] in KANSUJI_INT_MAP.keys():
+                y = KANSUJI_INT_MAP[l[-1]]
+                index = 1
+                x = 9
+                while x > 0:
+                    if l[index+1] != '・':
+                        piece = Piece(
+                            KANJI_PIECE_MAP[l[index+1]],
+                            1 if l[index] == 'v' else 0
+                        )
+                        board[Square(x, y).to_int()] = piece
+                    index += 2
+                    x -= 1
+
+        return Board(board, b_hand, w_hand)
+
 
 class Kif:
     def __init__(self, path):
@@ -225,6 +268,7 @@ class Kif:
 
 
 if __name__ == '__main__':
-    kif = Kif('test.kif')
+    # kif = Kif('test.kifu')
+    kif = Kif('test2.kifu')
     board = kif.create_specified_board()
     board.print()
