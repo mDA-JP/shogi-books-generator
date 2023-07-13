@@ -183,17 +183,16 @@ class KifParser:
         board = Board() 
         moves = []
         for l in f:
+            l = l.strip()
             if '後手の持駒' in l:
                 board = cls._init_board(f, l)
-
             ll = l.split()
-            if ll[0] == '1':
+
+            if l == '手数----指手---------消費時間--':
                 flag = True
 
             if flag and ll[0].isdigit():
                 move_str = ll[1]
-                if move_str == '投了':
-                    break
                 x = int(move_str[0])
                 y = KANSUJI_INT_MAP[move_str[1]]
                 phase = int(ll[0]) % 2 == 1
@@ -226,7 +225,7 @@ class KifParser:
                 num = KANSUJI_INT_MAP[p[1:]]
                 hand[piece] = num
 
-        _hand(s.strip())
+        _hand(s)
 
         for l in f:
             l = l.strip()
