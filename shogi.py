@@ -176,12 +176,44 @@ class Move:
     comment: str = ''
 
 
+class Node:
+    def __init__(self, move: Move=None, parent=None):
+        self.move = move
+        self.parent = parent
+        self.children = []
+
+    def append_child(self, child):
+        self.children.append(child)
+
+
+class KifTree:
+    def __init__(self, init_board: Board, root: Node):
+        self.init_board = init_board
+        self.root = root
+
+    def create_specified_board(self, index=None):
+        node = self.root.children[0]
+        board = deepcopy(self.init_board)
+        i = 0
+        while True:
+            board.move(node.move)
+            i += 1
+            if index is not None and index <= i:
+                break
+            if len(node.children) == 0:
+                break
+            node = node.children[0]
+
+        return board
+
+
 class KifParser:
     @classmethod
     def parse(cls, f):
         flag = False
         board = Board() 
-        moves = []
+        root = Node()
+        current_node = root
         for l in f:
             l = l.strip()
             if '後手の持駒' in l:
@@ -193,6 +225,8 @@ class KifParser:
 
             if flag and ll[0].isdigit():
                 move_str = ll[1]
+                if move_str[:2] == '投了':
+                    break
                 x = int(move_str[0])
                 y = KANSUJI_INT_MAP[move_str[1]]
                 phase = int(ll[0]) % 2 == 1
@@ -206,10 +240,16 @@ class KifParser:
                 )
                 if '打' not in move_str:
                     move.from_ = Square(int(move_str[-3]), int(move_str[-2]))
-                moves.append(move)
+                node = Node(
+                    move,
+                    current_node
+                )
+                print(node)
+                current_node.append_child(node)
+                current_node = node
             elif l[0] == '*':
-                moves[-1].comment += l[1:]
-        return board, moves
+                current_node.parent.move.comment += l[1:]
+        return KifTree(board, root)
 
     @classmethod
     def _init_board(cls, f, s):
@@ -253,21 +293,18 @@ class KifParser:
 class Kif:
     def __init__(self, path):
         self.path = path
-        if '.kif' in path:
+        if '.kif' in path or '.kifu' in path:
             parser = KifParser
-        self.start_board, self.moves = parser.parse(open(self.path, 'r'))
+        self.tree = parser.parse(open(self.path, 'r'))
 
     def create_specified_board(self, index=None):
-        board = deepcopy(self.start_board)
-        if index == None:
-            index = len(self.moves)
-        for i in range(index):
-            board.move(self.moves[i])
-        return board
+        self.tree.create_specified_board(index)
 
 
 if __name__ == '__main__':
-    # kif = Kif('test.kifu')
-    kif = Kif('test2.kifu')
-    board = kif.create_specified_board()
+    kif = Kif('test.kifu')
+    # kif = Kif('test2.kifu')
+    board = kif.tree.create_specified_board()
     board.print()
+    # board = kif.create_specified_board()
+    # board.print()
