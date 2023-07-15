@@ -206,6 +206,9 @@ class KifTree:
 
         return board
 
+    def extract_subtree(self, branch=0):
+        pass
+
 
 class KifParser:
     @classmethod
@@ -216,43 +219,15 @@ class KifParser:
         current_node = root
         for l in f:
             l = l.strip()
-            if '後手の持駒' in l:
-                board = cls._init_board(f, l)
             ll = l.split()
-
-            if l == '手数----指手---------消費時間--':
-                flag = True
-
-            if flag and ll[0].isdigit():
-                move_str = ll[1]
-                if move_str[:2] == '投了':
-                    break
-                x = int(move_str[0])
-                y = KANSUJI_INT_MAP[move_str[1]]
-                phase = int(ll[0]) % 2 == 1
-                piece_type = KANJI_PIECE_MAP[move_str[2]]
-                move = Move(
-                    phase,
-                    Piece(piece_type, 0 if phase else 1, piece_type >= TO),
-                    Square(0, 0),
-                    Square(x, y),
-                    '成' in move_str
-                )
-                if '打' not in move_str:
-                    move.from_ = Square(int(move_str[-3]), int(move_str[-2]))
-                node = Node(
-                    move,
-                    current_node
-                )
-                print(node)
-                current_node.append_child(node)
-                current_node = node
-            elif l[0] == '*':
-                current_node.parent.move.comment += l[1:]
+            if '後手の持駒' in l:
+                board = cls._generate_init_board(f, l)
+            elif l == '手数----指手---------消費時間--':
+                root = cls._generate_move_tree(f)
         return KifTree(board, root)
 
     @classmethod
-    def _init_board(cls, f, s):
+    def _generate_init_board(cls, f, s):
         b_hand = [0] * 7
         w_hand = [0] * 7
         board = EMPTY_BOARD
@@ -286,8 +261,46 @@ class KifParser:
                         board[Square(x, y).to_int()] = piece
                     index += 2
                     x -= 1
+            if '先手の持駒' in l:
+                break
 
         return Board(board, b_hand, w_hand)
+
+    @classmethod
+    def _generate_move_tree(clss, f):
+        root = Node()
+        current_node = root
+        for l in f:
+            l = l.strip()
+            if len(l) == 0:
+                continue
+            ll = l.split()
+            if ll[0].isdigit():
+                move_str = ll[1]
+                if move_str[:2] == '投了':
+                    break
+                x = int(move_str[0])
+                y = KANSUJI_INT_MAP[move_str[1]]
+                phase = int(ll[0]) % 2 == 1
+                piece_type = KANJI_PIECE_MAP[move_str[2]]
+                move = Move(
+                    phase,
+                    Piece(piece_type, 0 if phase else 1, piece_type >= TO),
+                    Square(0, 0),
+                    Square(x, y),
+                    '成' in move_str
+                )
+                if '打' not in move_str:
+                    move.from_ = Square(int(move_str[-3]), int(move_str[-2]))
+                node = Node(
+                    move,
+                    current_node
+                )
+                current_node.append_child(node)
+                current_node = node
+            elif l[0] == '*':
+                current_node.parent.move.comment += l[1:]
+        return root
 
 
 class Kif:
@@ -302,9 +315,7 @@ class Kif:
 
 
 if __name__ == '__main__':
-    kif = Kif('test.kifu')
-    # kif = Kif('test2.kifu')
-    board = kif.tree.create_specified_board()
+    # kif = Kif('test.kifu')
+    kif = Kif('test2.kifu')
+    board = kif.tree.create_specified_board(5)
     board.print()
-    # board = kif.create_specified_board()
-    # board.print()
