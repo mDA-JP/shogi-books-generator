@@ -67,6 +67,10 @@ KANSUJI_INT_MAP = {
 }
 
 
+class NullBoardException(Exception):
+    pass
+
+
 @dataclass
 class Piece:
     type_: int
@@ -208,6 +212,9 @@ class KifTree:
                 current_branch += 1
             board.move(node.move)
             i += 1
+        if not (branch == current_branch and ((index is not None and i == index) or index is None)):
+            raise NullBoardException()
+
         return board
 
     def extract_subtree(self, branch=0):
@@ -325,5 +332,5 @@ class Kif:
 
 if __name__ == '__main__':
     kif = Kif('test.kifu')
-    board = kif.tree.create_specified_board(branch=1, index=None)
+    board = kif.tree.create_specified_board(branch=1, index=4)
     board.print()
