@@ -168,16 +168,16 @@ class Board:
 
 @dataclass
 class Move:
-    phase: bool
-    piece: Piece
-    from_: Square
-    to: Square
-    promotion: bool
+    phase: bool = None
+    piece: Piece = None
+    from_: Square = None
+    to: Square = None
+    promotion: bool = None
     comment: str = ''
 
 
 class Node:
-    def __init__(self, move: Move=None, parent=None):
+    def __init__(self, move: Move=Move(), parent=None):
         self.move = move
         self.parent = parent
         self.children = []
@@ -191,19 +191,23 @@ class KifTree:
         self.init_board = init_board
         self.root = root
 
-    def create_specified_board(self, index=None):
-        node = self.root.children[0]
+    def create_specified_board(self, branch=0, index=None):
+        node = self.root
         board = deepcopy(self.init_board)
         i = 0
+        current_branch = 0
         while True:
-            board.move(node.move)
-            i += 1
             if index is not None and index <= i:
                 break
             if len(node.children) == 0:
                 break
-            node = node.children[0]
-
+            elif len(node.children) == 1 or branch <= current_branch:
+                node = node.children[0]
+            elif len(node.children) == 2 and branch > current_branch:
+                node = node.children[1]
+                current_branch += 1
+            board.move(node.move)
+            i += 1
         return board
 
     def extract_subtree(self, branch=0):
@@ -277,8 +281,8 @@ class KifParser:
             ll = l.split()
             if ll[0].isdigit():
                 move_str = ll[1]
-                if move_str[:2] == '投了':
-                    break
+                if move_str[:2] in ('投了', '中断'):
+                    continue
                 x = int(move_str[0])
                 y = KANSUJI_INT_MAP[move_str[1]]
                 phase = int(ll[0]) % 2 == 1
@@ -299,7 +303,12 @@ class KifParser:
                 current_node.append_child(node)
                 current_node = node
             elif l[0] == '*':
-                current_node.parent.move.comment += l[1:]
+                current_node.move.comment += l[1:]
+            elif '変化' in l:
+                n = int(l.split('：')[1][:-1])
+                current_node = root
+                for i in range(n-1):
+                    current_node = current_node.children[0]
         return root
 
 
@@ -310,12 +319,11 @@ class Kif:
             parser = KifParser
         self.tree = parser.parse(open(self.path, 'r'))
 
-    def create_specified_board(self, index=None):
-        self.tree.create_specified_board(index)
+    def create_specified_board(self, branch=0, index=None):
+        self.tree.create_specified_board(branch, index)
 
 
 if __name__ == '__main__':
-    # kif = Kif('test.kifu')
-    kif = Kif('test2.kifu')
-    board = kif.tree.create_specified_board(5)
+    kif = Kif('test.kifu')
+    board = kif.tree.create_specified_board(branch=1, index=None)
     board.print()
