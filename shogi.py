@@ -224,10 +224,8 @@ class KifTree:
 class KifParser:
     @classmethod
     def parse(cls, f):
-        flag = False
         board = Board() 
         root = Node()
-        current_node = root
         for l in f:
             l = l.strip()
             ll = l.split()
@@ -278,7 +276,7 @@ class KifParser:
         return Board(board, b_hand, w_hand)
 
     @classmethod
-    def _generate_move_tree(clss, f):
+    def _generate_move_tree(cls, f):
         root = Node()
         current_node = root
         for l in f:
